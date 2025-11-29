@@ -1,8 +1,8 @@
 from PySide6.QtWidgets import *
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont
-from graphic1 import SudokuSolverGUI
-from graphic2 import KPieceSolverGUI
+from graphical_interfaces.sudoku import SudokuSolverGUI
+from graphical_interfaces.Kpiece import KPieceSolverGUI
 
 # ---------------------------- Styles ----------------------------
 WINDOW_BG = "#121212"
