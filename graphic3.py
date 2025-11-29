@@ -42,12 +42,6 @@ PIECES = {
           [(0,0),(0,1),(1,0),(2,0)], [(0,0),(0,1),(0,2),(1,2)]]
 }
 
-# Distinct border colors for each piece
-BORDERS = {
-    "I": "#FF4136", "O": "#FFDC00", "T": "#B10DC9",
-    "S": "#2ECC40", "Z": "#FF851B", "J": "#0074D9", "L": "#FF69B4"
-}
-
 # ---------------- Helper functions ----------------
 def piece_fits(shape, r, c, rows, cols):
     for dr,dc in shape:
@@ -106,7 +100,7 @@ class TetrisKPiecesGUI(QMainWindow):
         layout.setContentsMargins(50,30,50,30)
         page.setStyleSheet("background-color: #1E1E1E;")
         
-        # Board size N
+        # Grid size
         label_rows = QLabel("Rows (N):")
         label_rows.setStyleSheet(LABEL_STYLE)
         layout.addWidget(label_rows)
@@ -121,7 +115,7 @@ class TetrisKPiecesGUI(QMainWindow):
         self.cols_input.setPlaceholderText("e.g., 6")
         layout.addWidget(self.cols_input)
         
-        # Number of pieces K
+        # Number of pieces
         label_k = QLabel("Number of pieces (K):")
         label_k.setStyleSheet(LABEL_STYLE)
         layout.addWidget(label_k)
@@ -129,25 +123,20 @@ class TetrisKPiecesGUI(QMainWindow):
         self.k_input.setPlaceholderText("e.g., 4")
         layout.addWidget(self.k_input)
         
-        # Piece selection (ComboBox)
-        label_piece = QLabel("Select Piece:")
-        label_piece.setStyleSheet(LABEL_STYLE)
-        layout.addWidget(label_piece)
+        # Piece selection
+        label_pieces = QLabel("Select Pieces:")
+        label_pieces.setStyleSheet(LABEL_STYLE)
+        layout.addWidget(label_pieces)
         
-        self.piece_combo = QComboBox()
-        self.piece_combo.addItems(list(PIECES.keys()))
-        self.piece_combo.setStyleSheet("""
-            QComboBox {
-                padding: 10px;
-                border: 2px solid #4ECDC4;
-                border-radius: 8px;
-                font-size: 18px;
-                color: white;
-                background-color: #2E2E2E;
-            }
-            QComboBox:hover { border:2px solid #00CED1; }
-        """)
-        layout.addWidget(self.piece_combo)
+        self.piece_checks = {}
+        piece_layout = QHBoxLayout()
+        for piece in PIECES.keys():
+            cb = QCheckBox(piece)
+            cb.setStyleSheet("color:white;font-weight:bold;")
+            cb.setChecked(True)
+            self.piece_checks[piece] = cb
+            piece_layout.addWidget(cb)
+        layout.addLayout(piece_layout)
         
         # Solve button
         solve_btn = QPushButton("🚀 SOLVE")
@@ -171,7 +160,7 @@ class TetrisKPiecesGUI(QMainWindow):
         
         self.board_widget = QWidget()
         self.board_layout = QGridLayout()
-        self.board_layout.setSpacing(0)
+        self.board_layout.setSpacing(1)
         self.board_widget.setLayout(self.board_layout)
         layout.addWidget(self.board_widget)
         
@@ -198,44 +187,50 @@ class TetrisKPiecesGUI(QMainWindow):
             QMessageBox.warning(self,"Input Error","Enter valid integers")
             return
         
-        piece_name = self.piece_combo.currentText()
-        rotations = PIECES[piece_name]
-        border_color = BORDERS[piece_name]
+        # Selected pieces
+        selected_pieces = [p for p,cb in self.piece_checks.items() if cb.isChecked()]
+        if not selected_pieces:
+            QMessageBox.warning(self,"Input Error","Select at least one piece")
+            return
         
         # ---------------- Gurobi Model ----------------
         model = Model("Tetris_KPieces")
         model.setParam("OutputFlag",0)
         x = {}
-        for shape in rotations:
-            for r in range(rows):
-                for c in range(cols):
-                    if piece_fits(shape,r,c,rows,cols):
-                        x[(r,c,str(shape))] = model.addVar(vtype=GRB.BINARY)
+        for piece_name in selected_pieces:
+            rotations = PIECES[piece_name]
+            for shape in rotations:
+                for r in range(rows):
+                    for c in range(cols):
+                        if piece_fits(shape,r,c,rows,cols):
+                            x[(piece_name,r,c,str(shape))] = model.addVar(vtype=GRB.BINARY)
         
         # Non-overlapping constraints
         for i in range(rows):
             for j in range(cols):
                 model.addConstr(
-                    sum(var for (r,c,sh),var in x.items() if (i,j) in cells_covered_by(eval(sh),r,c)) <= 1
+                    sum(var for (p,r,c,sh),var in x.items() if (i,j) in cells_covered_by(eval(sh),r,c)) <= 1
                 )
         
-        # Total pieces K
+        # Total pieces constraint
         model.addConstr(sum(x.values()) == K)
         model.setObjective(0,GRB.MINIMIZE)
         model.optimize()
         
         if model.status != GRB.OPTIMAL:
-            QMessageBox.warning(self,"No Solution","Cannot place pieces without overlaps")
+            QMessageBox.warning(self,"No Solution","Cannot place K pieces without overlaps")
             return
         
         # ---------------- Build grid ----------------
         grid = [["" for _ in range(cols)] for _ in range(rows)]
-        for (r,c,sh),var in x.items():
+        for (p,r,c,sh),var in x.items():
             if var.X > 0.5:
                 for rr,cc in cells_covered_by(eval(sh),r,c):
-                    grid[rr][cc] = piece_name
+                    grid[rr][cc] = p
         
         cell_size = min(500//cols,60)
+        colors = {"I":"#FF4136","O":"#FFDC00","T":"#B10DC9","S":"#2ECC40",
+                  "Z":"#FF851B","J":"#0074D9","L":"#FF69B4"}
         
         for r in range(rows):
             for c in range(cols):
@@ -245,7 +240,7 @@ class TetrisKPiecesGUI(QMainWindow):
                 piece = grid[r][c]
                 if piece:
                     cell.setText(piece)
-                    cell.setStyleSheet(f"background-color:#1E90FF;color:white;font-weight:bold;font-size:{cell_size//2}px;border:2px solid {border_color};")
+                    cell.setStyleSheet(f"background-color:{colors[piece]};color:white;font-weight:bold;font-size:{cell_size//2}px;border:1px solid #111;")
                 else:
                     cell.setStyleSheet("background-color:#1E1E1E;border:1px solid #333;")
                 self.board_layout.addWidget(cell,r,c)

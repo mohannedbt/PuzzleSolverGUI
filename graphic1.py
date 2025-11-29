@@ -85,6 +85,13 @@ class SudokuSolverGUI(QMainWindow):
         layout.addWidget(start_btn)
         layout.addWidget(manual_btn)
         return page
+    # ---------------- Toggle ---------------
+    def toggle_block_input(self, state):
+        # 0 = unchecked, 2 = checked
+        if state == 2:
+            self.block_input.show()
+        else:
+            self.block_input.hide()
 
     # ---------------- Input Page ----------------
     def create_input_page(self):
@@ -128,9 +135,7 @@ class SudokuSolverGUI(QMainWindow):
         layout.addWidget(self.block_input)
 
         # Connect checkbox to toggle function
-        self.block_checkbox.stateChanged.connect(
-            lambda state: self.block_input.setVisible(state != Qt.CheckState.Checked)
-        )
+        self.block_checkbox.stateChanged.connect(self.toggle_block_input)
 
         # Solve button
         self.solve_btn = QPushButton("🚀 SOLVE")
@@ -192,19 +197,121 @@ class SudokuSolverGUI(QMainWindow):
     # ---------------- Manual Page ----------------
     def create_manual_page(self):
         page = QWidget()
-        layout = QVBoxLayout(page)
-        layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        page.setStyleSheet("background-color: #1E1E1E;")  # dark gray
 
-        label = QLabel("MANUAL PAGE (empty for now)")
-        label.setStyleSheet("color:white; font-size:24px; font-weight:bold;")
-        layout.addWidget(label)
+        # Main layout for the page
+        main_layout = QVBoxLayout(page)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(0)
 
-        back_btn = QPushButton("⬅ BACK")
-        back_btn.setStyleSheet(BUTTON_STYLE)
+        # Scroll area
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setStyleSheet("border: none;")  # remove scroll area border
+
+        # Container widget inside scroll area
+        container = QWidget()
+        scroll_layout = QVBoxLayout(container)
+        scroll_layout.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
+        scroll_layout.setContentsMargins(30, 20, 30, 20)
+        scroll_layout.setSpacing(25)
+
+        # Title
+        title = QLabel("📖 SUDOKU SOLVER MANUAL")
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        title.setStyleSheet("font-size: 40px; font-weight: bold; color: #FFFFFF;")
+        scroll_layout.addWidget(title)
+
+        # Instructions
+        manual_content = """
+        <h1 style='color:#FFD700; font-size:32px;'>📖 Sudoku Solver - User Manual</h1>
+
+        <p>Welcome to the <b>Sudoku Solver</b>! This guide explains each functionality in the application.</p>
+
+        <h2 style='color:#4ECDC4; font-size:28px;'>1️⃣ Menu Page</h2>
+        <ul>
+        <li><b>START SOLVER:</b> Opens the input page to enter Sudoku parameters.</li>
+        <li><b>MANUAL PAGE:</b> Opens this manual page, with instructions and tips.</li>
+        </ul>
+
+        <h2 style='color:#4ECDC4; font-size:28px;'>2️⃣ Input Page</h2>
+        <ul>
+        <li><b>Sudoku size (n):</b> Enter the size of the Sudoku grid. Standard Sudoku is 9x9.</li>
+        <li><b>Cells to remove:</b> Enter the number of cells to remove to create the puzzle.</li>
+        <li><b>Use custom block size:</b> Check this box if you want to define a custom block size (default is √n).</li>
+        <li><b>Block size:</b> Enter the block size if using a custom block size.</li>
+        <li><b>🚀 SOLVE:</b> Generates the Sudoku solution and puzzle with removed cells.</li>
+        <li><b>⬅ BACK:</b> Returns to the main menu.</li>
+        </ul>
+
+        <h2 style='color:#4ECDC4; font-size:28px;'>3️⃣ Board Page</h2>
+        <ul>
+        <li>Displays the Sudoku grid after solving.</li>
+        <li>Numbers in the cells represent the solution; empty cells are removed for the puzzle.</li>
+        <li>Subgrid boundaries are highlighted for easier visualization.</li>
+        <li><b>⬅ BACK:</b> Return to the input page to change parameters or solve another puzzle.</li>
+        </ul>
+
+        <h2 style='color:#4ECDC4; font-size:28px;'>4️⃣ Manual Page</h2>
+        <ul>
+        <li>Provides instructions and explanation of all application features.</li>
+        <li>Scrollable area allows reading large manuals without breaking layout.</li>
+        </ul>
+
+        <h2 style='color:#FFD700; font-size:28px;'>💡 Tips</h2>
+        <ul>
+        <li>Ensure that 'Cells to remove' is less than n².</li>
+        <li>Block size must satisfy n =block_size².</li>
+        <li>If an invalid configuration is provided, the solver will alert you with a warning.</li>
+        <li>Use proper Sudoku rules: each number 1–n appears exactly once in each row, column, and subgrid.</li>
+        <li>Check your custom block size carefully; otherwise, the solver will indicate an error.</li>
+        </ul>
+
+        <p style='color:#FFD700; font-size:24px;'><b>Enjoy solving your Sudoku puzzles! 🧩</b></p>
+        """
+        manual_text = QTextEdit()
+        manual_text.setReadOnly(True)
+        manual_text.setStyleSheet("""
+            QTextEdit {
+                background-color:#1E1E1E;
+                color:white;
+                font-size:18px;
+                padding:10px;
+                border:2px solid #4ECDC4;
+                border-radius:8px;
+            }
+        """)
+        manual_text.setHtml(manual_content)
+        scroll_layout.addWidget(manual_text)
+
+
+        # Back to Menu button
+        back_btn = QPushButton("⬅ BACK TO MENU")
+        back_btn.setMinimumHeight(50)
+        back_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        back_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #FF6B6B;
+                color: white;
+                font-weight: bold;
+                font-size: 22px;
+                border-radius: 12px;
+                padding: 10px;
+            }
+            QPushButton:hover {
+                background-color: #FF5252;
+            }
+        """)
         back_btn.clicked.connect(lambda: self.stacked.setCurrentWidget(self.menu_page))
-        layout.addWidget(back_btn)
+        scroll_layout.addWidget(back_btn)
+
+        # Set container as scroll widget
+        scroll.setWidget(container)
+        main_layout.addWidget(scroll)
 
         return page
+
+
 
     # ---------------- Clear Board ----------------
     def clear_board(self):

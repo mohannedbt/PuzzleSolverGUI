@@ -77,10 +77,14 @@ class KPieceSolverGUI(QMainWindow):
         self.menu_page = self.create_menu_page()
         self.input_page = self.create_input_page()
         self.board_page = self.create_board_page()
+        self.manual_page = self.create_manual_page()
+
+
         
         self.stacked.addWidget(self.menu_page)
         self.stacked.addWidget(self.input_page)
         self.stacked.addWidget(self.board_page)
+        self.stacked.addWidget(self.manual_page)
 
     # ---------------- Menu Page ----------------
     def create_menu_page(self):
@@ -96,10 +100,106 @@ class KPieceSolverGUI(QMainWindow):
         start_btn = QPushButton("START")
         start_btn.setStyleSheet(BUTTON_STYLE)
         start_btn.clicked.connect(lambda: self.stacked.setCurrentWidget(self.input_page))
-        
+        manual_btn = QPushButton("📘 MANUAL")
+        manual_btn.setStyleSheet(BUTTON_STYLE)
+        manual_btn.clicked.connect(lambda: self.stacked.setCurrentWidget(self.manual_page))
         layout.addWidget(title)
         layout.addWidget(start_btn)
+        layout.addWidget(manual_btn)
         return page
+    # ----------------------------
+    # Manual Page(Scrollable)
+    #----------------------------
+    def create_manual_page(self):
+        page = QWidget()
+        page.setStyleSheet("background-color: #1E1E1E;")  # dark gray
+
+        # Main layout for the page
+        main_layout = QVBoxLayout(page)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(0)
+
+        # Scroll area
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setStyleSheet("border: none;")  # remove borders
+
+        # Container widget inside scroll area
+        container = QWidget()
+        scroll_layout = QVBoxLayout(container)
+        scroll_layout.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
+        scroll_layout.setContentsMargins(30, 20, 30, 20)
+        scroll_layout.setSpacing(25)
+
+        # Title
+        title = QLabel("📖 K-PIECES SOLVER MANUAL")
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        title.setStyleSheet("font-size: 40px; font-weight: bold; color: #FFFFFF;")
+        scroll_layout.addWidget(title)
+
+        # Instructions
+        instructions = QLabel("""
+    Welcome to the K-Pieces Solver! Here's how to use it:
+
+    1️⃣ Select the type of piece you want to place on the board:
+    - Queen ♛
+    - Rook ♜
+    - Bishop ♝
+    - Knight ♞
+
+    2️⃣ Enter the board size N (e.g., 8 for an 8x8 board).
+
+    3️⃣ Enter the number of pieces K to place on the board.
+
+    4️⃣ Click 🚀 SOLVE to compute a valid placement.
+
+    5️⃣ If a solution exists, the board will display the pieces:
+    - Blue background cells with golden border indicate placed pieces.
+    - Dark gray cells are empty.
+
+    ⚠️ Notes:
+    - Max Queens on N x N board = N
+    - Max Knights on N x N board = (N*N + 1) // 2
+    - If no solution exists, a warning will appear.
+
+    6️⃣ Click TRY AGAIN to go back and try different parameters.
+    7️⃣ Use ⬅ BACK to return to the main menu.
+    """)
+        instructions.setStyleSheet("font-size: 22px; color: #FFFFFF;")
+        instructions.setWordWrap(True)
+        scroll_layout.addWidget(instructions)
+
+        # Spacer to push content to top
+        scroll_layout.addStretch()
+
+        # Back to Menu button
+        back_btn = QPushButton("⬅ BACK TO MENU")
+        back_btn.setMinimumHeight(50)
+        back_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        back_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #FF6B6B;
+                color: white;
+                font-weight: bold;
+                font-size: 22px;
+                border-radius: 12px;
+                padding: 10px;
+            }
+            QPushButton:hover {
+                background-color: #FF5252;
+            }
+        """)
+        back_btn.clicked.connect(lambda: self.stacked.setCurrentWidget(self.menu_page))
+        scroll_layout.addWidget(back_btn)
+
+        # Set container as scroll widget
+        scroll.setWidget(container)
+        main_layout.addWidget(scroll)
+
+        return page
+
+    
+
 
     # ---------------- Input Page ----------------
     def create_input_page(self):
