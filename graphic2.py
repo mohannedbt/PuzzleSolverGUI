@@ -452,9 +452,3 @@ class KPieceSolverGUI(QMainWindow):
         self.stacked.setCurrentWidget(self.board_page)
 
 
-
-if __name__=="__main__":
-    app = QApplication([])
-    win = KPieceSolverGUI()
-    win.show()
-    app.exec()

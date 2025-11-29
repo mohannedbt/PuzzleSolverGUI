@@ -431,9 +431,3 @@ class SudokuSolverGUI(QMainWindow):
 
         self.stacked.setCurrentWidget(self.board_page)
 
-
-if __name__=="__main__":
-    app = QApplication([])
-    win = SudokuSolverGUI()
-    win.show()
-    app.exec()
