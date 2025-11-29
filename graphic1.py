@@ -224,7 +224,7 @@ class SudokuSolverGUI(QMainWindow):
             QMessageBox.warning(self, "Input Error", "Enter valid numbers.")
             return
 
-        if n < 1 or (block_size < 1 and self.block_checkbox.isChecked()==True) or block_size > n:
+        if n < 1 or (block_size < 1 and self.block_checkbox.isChecked()) or block_size > n:
             QMessageBox.warning(self, "Input Error", "Invalid sizes.")
             return
         if eliminate >= n*n:

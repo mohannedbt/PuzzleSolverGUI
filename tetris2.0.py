@@ -15,15 +15,17 @@ for r in range(1,n+1):
     for c in range(1,n+1):
         for d in range(1,n+1):
             x[(r,c,d)] = model.addVar(vtype=GRB.BINARY, name=f"x_{r}_{c}_{d}")
+#unique number per cell
 for r in range(1,n+1):
     for c in range(1,n+1):
         model.addConstr(sum(x[(r,c,d)] for d in range(1,n+1))<= 1)
-for r in range(1,n+1):
-    for c in range(1,n+1):
-        model.addConstr(sum(x[(r,c,1)] <= 1))
-        model.addConstr(sum(x[(r+1,c+1,1)]) <= 1)
-        model.addConstr(sum(x[(r+1,c,1)] )<= 1)
-        model.addConstr(sum(x[(r,c+1,1)]) <= 1)
+#O shaped constraints
+# O-shaped piece (2x2)
+for r in range(1, n):      # 1-indexed, fits in grid
+    for c in range(1, n):
+        model.addConstr(
+            sum(x[(rr, cc, 1)] for rr in range(r, r+2) for cc in range(c, c+2)) == 1
+        )
 model.setObjective(0, GRB.MINIMIZE)
 model.optimize()
 if model.status == GRB.OPTIMAL:
@@ -32,25 +34,11 @@ if model.status == GRB.OPTIMAL:
     for (r,c,d), var in x.items():
         if var.X > 0.5:
             grid[r-1][c-1] = d
-    # Afficher la grille
-    eliminate=0
-    while True and n>1:
-       eliminate=int(input("saisir le nombre de cases à éliminer"))
-       if eliminate<n*n:
-           break
-       else:
-           print("Le nombre de cases à éliminer doit être inférieur à",n*n)
-    list_eliminate=[]
-    while len(list_eliminate)<eliminate:
-        i=rand(0,n-1)
-        j=rand(0,n-1)
-        if (i,j) not in list_eliminate:
-            list_eliminate.append((i,j))
-            grid[i][j]=" " 
-    index=1
+
+
     for row in grid:
         if row:
            print(row)
-        index+=1
+       
 else:
     print("Pas de solution trouvée")

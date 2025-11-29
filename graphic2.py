@@ -318,24 +318,7 @@ class KPieceSolverGUI(QMainWindow):
                         rr, cc = r+dr, c+dc
                         if 1 <= rr <= n and 1 <= cc <= n:
                             model.addConstr(x[(r,c)] + x[(rr,cc)] <= 1)
-
-            # Distance variables and linearization
-            # y = {}
-            # for r1 in range(1,n+1):
-            #     for c1 in range(1,n+1):
-            #         for r2 in range(r1,n+1):
-            #             for c2 in range(1,n+1):
-            #                 if (r1,c1) < (r2,c2):  # only unique pairs
-            #                     y[(r1,c1,r2,c2)] = model.addVar(vtype=GRB.BINARY)
-            #                     model.addConstr(y[(r1,c1,r2,c2)] <= x[(r1,c1)])
-            #                     model.addConstr(y[(r1,c1,r2,c2)] <= x[(r2,c2)])
-            #                     model.addConstr(y[(r1,c1,r2,c2)] >= x[(r1,c1)] + x[(r2,c2)] - 1)
-
-            # # Maximize total Manhattan distance
-            # model.setObjective(
-            #     sum(y[(r1,c1,r2,c2)] * (abs(r1-r2)+abs(c1-c2)) for (r1,c1,r2,c2) in y),
-            #     GRB.MAXIMIZE
-            # )             
+            
         model.addConstr(sum(x[(r,c)] for r in range(1,n+1) for c in range(1,n+1)) == k)
         model.setObjective(0, GRB.MINIMIZE)
         model.optimize()
