@@ -66,6 +66,7 @@ color: #FFFFFF;
 class KPieceSolverGUI(QMainWindow):
     def __init__(self):
         super().__init__()
+        self.custom_pieces = {}   # name → list of attack offsets
         self.setWindowTitle("K-Pieces Solver")
         self.setGeometry(50, 50, 900, 700)
         self.setStyleSheet("background-color: #121212;")
@@ -78,6 +79,9 @@ class KPieceSolverGUI(QMainWindow):
         self.input_page = self.create_input_page()
         self.board_page = self.create_board_page()
         self.manual_page = self.create_manual_page()
+        self.create_piece_page = self.create_new_piece_page()
+
+
 
 
         
@@ -85,6 +89,7 @@ class KPieceSolverGUI(QMainWindow):
         self.stacked.addWidget(self.input_page)
         self.stacked.addWidget(self.board_page)
         self.stacked.addWidget(self.manual_page)
+        self.stacked.addWidget(self.create_piece_page)
 
     # ---------------- Menu Page ----------------
     def create_menu_page(self):
@@ -197,6 +202,107 @@ class KPieceSolverGUI(QMainWindow):
         main_layout.addWidget(scroll)
 
         return page
+    #--------------- toggle --------------------
+    def toggle_attack_square(self, r, c):
+        btn, base_color = self.custom_cells[(r, c)]
+
+        if btn.isChecked():
+            # Highlight green
+            btn.setStyleSheet("background-color: #00AA00;")
+        else:
+            # Return to normal board color
+            btn.setStyleSheet(f"background-color: {base_color};")
+
+    #-------------------Piece Page ----------------
+    def create_new_piece_page(self):
+        page = QWidget()
+        layout = QVBoxLayout(page)
+        layout.setAlignment(Qt.AlignTop | Qt.AlignHCenter)
+
+        title = QLabel("➕ Create Custom Piece")
+        title.setStyleSheet("font-size: 32px; font-weight: bold; color: white;")
+        layout.addWidget(title)
+
+        instructions = QLabel(
+            "Click squares to mark attack moves.\n"
+            "Center square is the piece's position."
+        )
+        instructions.setStyleSheet("font-size: 18px; color: #CCCCCC;")
+        instructions.setAlignment(Qt.AlignCenter)
+        layout.addWidget(instructions)
+
+        # ====== Chessboard grid (8x8) ======
+        self.custom_board_size = 8
+        size = self.custom_board_size
+        self.custom_board_widget = QWidget()
+        self.custom_board_widget.setContentsMargins(0, 0, 0, 0)
+        self.custom_board_widget.setStyleSheet("margin:0; padding:0; border:0;")
+
+        self.custom_board_layout = QGridLayout(self.custom_board_widget)
+        self.custom_board_layout.setSpacing(0)
+        self.custom_board_layout.setContentsMargins(0, 0, 0, 0)
+        self.custom_board_layout.setSizeConstraint(QLayout.SetFixedSize)
+        self.custom_board_widget.setFixedSize(size * 50, size * 50)
+
+        self.custom_cells = {}
+
+        for r in range(size):
+            for c in range(size):
+                btn = QPushButton()
+                btn.setFixedSize(50, 50)
+                btn.setCheckable(True)
+
+                base_color = "#EEEED2" if (r + c) % 2 == 0 else "#769656"
+
+                if r == size // 2 and c == size // 2:
+                    btn.setText("★")
+                    btn.setEnabled(False)
+                    btn.setStyleSheet("""
+                        QPushButton {
+                            background-color: #1E90FF;
+                            color:white;
+                            font-size:28px;
+                            margin:0; padding:0; border:0;
+                        }
+                    """)
+                else:
+                    btn.setStyleSheet(f"""
+                        QPushButton {{
+                            background-color:{base_color};
+                            margin:0; padding:0; border:0;
+                        }}
+                    """)
+                    btn.clicked.connect(lambda _, rr=r, cc=c: self.toggle_attack_square(rr, cc))
+
+                self.custom_cells[(r, c)] = (btn, base_color)
+                self.custom_board_layout.addWidget(btn, r, c)
+
+
+        layout.addWidget(self.custom_board_widget)
+
+        # ====== Piece name ======
+        name_label = QLabel("Piece Name:")
+        name_label.setStyleSheet("color:white; font-size:20px; font-weight:bold;")
+        layout.addWidget(name_label)
+
+        self.new_piece_name = QLineEdit()
+        self.new_piece_name.setStyleSheet(INPUT_STYLE)
+        layout.addWidget(self.new_piece_name)
+
+        # ====== Save button ======
+        save_btn = QPushButton("💾 SAVE PIECE")
+        save_btn.setStyleSheet(BUTTON_STYLE)
+        save_btn.clicked.connect(self.save_custom_piece)
+        layout.addWidget(save_btn)
+
+        # ====== Back button ======
+        back_btn = QPushButton("⬅ BACK")
+        back_btn.setStyleSheet(BUTTON_STYLE)
+        back_btn.clicked.connect(lambda: self.stacked.setCurrentWidget(self.input_page))
+        layout.addWidget(back_btn)
+
+        return page
+
 
     
 
@@ -312,6 +418,14 @@ class KPieceSolverGUI(QMainWindow):
         """)
         self.solve_btn.clicked.connect(self.solve)
         layout.addWidget(self.solve_btn)
+        # --------------- New Piece ----------------------
+
+        new_piece_btn = QPushButton("➕ CREATE NEW PIECE")
+        new_piece_btn.setMinimumHeight(50)
+        new_piece_btn.setCursor(Qt.PointingHandCursor)
+        new_piece_btn.setStyleSheet(BUTTON_STYLE)
+        new_piece_btn.clicked.connect(lambda: self.stacked.setCurrentWidget(self.create_piece_page))
+        layout.addWidget(new_piece_btn)
 
         # ---------------- Back button ----------------
         back_btn = QPushButton("⬅ BACK")
@@ -363,92 +477,170 @@ class KPieceSolverGUI(QMainWindow):
             w = self.board_layout.itemAt(i).widget()
             if w:
                 w.deleteLater()
+    # ---------------- save Custom piece ------------
+    def save_custom_piece(self):
+        name = self.new_piece_name.text().strip()
+        if not name:
+            QMessageBox.warning(self, "Error", "Enter a piece name.")
+            return
+
+        center = self.custom_board_size // 2
+        attacks = []
+
+        # Iterate on real dictionary
+        for (r, c), (btn, base_color) in self.custom_cells.items():
+            if r == center and c == center:
+                continue  # skip center
+
+            if btn.isChecked():  # green square
+                dr = r - center
+                dc = c - center
+                attacks.append((dr, dc))
+
+        if not attacks:
+            QMessageBox.warning(self, "Error", "Select at least one attack square.")
+            return
+
+        # Save the custom piece
+        self.custom_pieces[name] = attacks
+
+        # Add into combo
+        self.piece_combo.addItem(f"{name} ⭐")
+
+        QMessageBox.information(self, "Saved", f"Piece '{name}' added!")
+
+        self.stacked.setCurrentWidget(self.input_page)
+
+
 
     # ---------------- Solve ----------------
     def solve(self):
         self.clear_board()
+
+        # ---------------- Parse Inputs ----------------
         try:
-            piece_text = self.piece_combo.currentText()   # e.g., "Rook ♜"
-            piece = piece_text.split()[0]                 # "Rook"
-            symbol = {"Queen":"♛","Rook":"♜","Bishop":"♝","Knight":"♞"}[piece]
+            piece_text = self.piece_combo.currentText()
+            piece = piece_text.split()[0]     # name before symbol
             n = int(self.n_input.text())
             k = int(self.k_input.text())
         except:
             QMessageBox.warning(self, "Input Error", "Enter valid numbers.")
             return
 
-        # Quick impossible check for Queens
+        # ---------------- Select Display Symbol ----------------
+        default_symbols = {
+            "Queen":  "♛",
+            "Rook":   "♜",
+            "Bishop": "♝",
+            "Knight": "♞",
+        }
+
+        if piece in default_symbols:
+            symbol = default_symbols[piece]
+        else:
+            # Custom pieces get a ⭐ symbol
+            symbol = "⭐"
+
+        # ---------------- Quick Impossible Checks ----------------
         if piece == "Queen" and k > n:
             QMessageBox.warning(self, "Impossible", f"Max {n} Queens on {n}x{n} board!")
             return
 
-        # Quick impossible check for Knights
         if piece == "Knight" and k > (n*n + 1)//2:
             QMessageBox.warning(self, "Impossible", f"Max {(n*n + 1)//2} Knights on {n}x{n} board!")
             return
 
         # ---------------- Gurobi Model ----------------
         model = Model("K_Pieces")
-        model.setParam("OutputFlag",0)
+        model.setParam("OutputFlag", 0)
+
         x = {}
-        for r in range(1,n+1):
-            for c in range(1,n+1):
-                x[(r,c)] = model.addVar(vtype=GRB.BINARY)
+        for r in range(1, n+1):
+            for c in range(1, n+1):
+                x[(r, c)] = model.addVar(vtype=GRB.BINARY)
 
-        if piece in ["Queen","Rook"]:
-            for r in range(1,n+1):
-                model.addConstr(sum(x[(r,c)] for c in range(1,n+1)) <= 1)
-            for c in range(1,n+1):
-                model.addConstr(sum(x[(r,c)] for r in range(1,n+1)) <= 1)
+        # ---------------- Constraints ----------------
+        # Custom pieces
+        if piece in self.custom_pieces:
+            moves = self.custom_pieces[piece]
+            for r in range(1, n+1):
+                for c in range(1, n+1):
+                    for dr, dc in moves:
+                        rr = r + dr
+                        cc = c + dc
+                        if 1 <= rr <= n and 1 <= cc <= n:
+                            model.addConstr(x[(r, c)] + x[(rr, cc)] <= 1)
 
-        if piece in ["Queen","Bishop"]:
-            for d in range(-(n-1), n):
-                model.addConstr(sum(x[(r,c)] for r in range(1,n+1) for c in range(1,n+1) if r-c==d) <= 1)
-            for d in range(2, 2*n):
-                model.addConstr(sum(x[(r,c)] for r in range(1,n+1) for c in range(1,n+1) if r+c==d) <= 1)
-        
-        # Checkerboard placement for Knights
+        # Rook/Queen – rows & columns
+        if piece in ["Queen", "Rook"]:
+            for r in range(1, n+1):
+                model.addConstr(sum(x[(r, c)] for c in range(1, n+1)) <= 1)
+            for c in range(1, n+1):
+                model.addConstr(sum(x[(r, c)] for r in range(1, n+1)) <= 1)
+
+        # Bishop/Queen – diagonals
+        if piece in ["Queen", "Bishop"]:
+            for b in range(-(n-1), n):
+                model.addConstr(sum(x[(r, c)] for r in range(1, n+1)
+                                                for c in range(1, n+1)
+                                                if r-c == b) <= 1)
+
+            for b in range(2, 2*n):
+                model.addConstr(sum(x[(r, c)] for r in range(1, n+1)
+                                                for c in range(1, n+1)
+                                                if r+c == b) <= 1)
+
+        # Knight
         if piece == "Knight":
-            model.addConstr(x[(2,2)]==1)
-            # Non-attacking knight constraints
             moves = [(-2,-1),(-2,1),(-1,-2),(-1,2),(1,-2),(1,2),(2,-1),(2,1)]
-            for r in range(1,n+1):
-                for c in range(1,n+1):
-                    for dr,dc in moves:
+            for r in range(1, n+1):
+                for c in range(1, n+1):
+                    for dr, dc in moves:
                         rr, cc = r+dr, c+dc
                         if 1 <= rr <= n and 1 <= cc <= n:
-                            model.addConstr(x[(r,c)] + x[(rr,cc)] <= 1)
-            
-        model.addConstr(sum(x[(r,c)] for r in range(1,n+1) for c in range(1,n+1)) == k)
+                            model.addConstr(x[(r, c)] + x[(rr, cc)] <= 1)
+
+        # exactly K pieces
+        model.addConstr(sum(x[(r, c)] for r in range(1, n+1)
+                                    for c in range(1, n+1)) == k)
+
         model.setObjective(0, GRB.MINIMIZE)
         model.optimize()
 
         if model.status != GRB.OPTIMAL:
-            QMessageBox.warning(self,"No Solution", f"Cannot place {k} {piece}s on {n}x{n} board!")
+            QMessageBox.warning(self, "No Solution",
+                                f"Cannot place {k} {piece}s on {n}x{n} board!")
             return
 
-        # ---------------- Build the grid ----------------
+        # ---------------- Build Output Grid ----------------
         grid = [[0]*n for _ in range(n)]
-        for (r,c), var in x.items():
+        for (r, c), var in x.items():
             if var.X > 0.5:
                 grid[r-1][c-1] = 1
 
-        cell_size = min(500//n,60)
-        symbol = {"Queen":"♛","Rook":"♜","Bishop":"♝","Knight":"♞"}[piece]
+        # ---------------- Draw Board ----------------
+        cell_size = min(500//n, 60)
 
         for r in range(n):
             for c in range(n):
                 cell = QLabel()
                 cell.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                cell.setFixedSize(cell_size,cell_size)
-                color = "#3A3A3A" if (r+c)%2==0 else "#2C2C2C"
-                if grid[r][c]==1:
+                cell.setFixedSize(cell_size, cell_size)
+
+                color = "#3A3A3A" if (r+c) % 2 == 0 else "#2C2C2C"
+
+                if grid[r][c] == 1:
                     cell.setText(symbol)
-                    cell.setStyleSheet(f"background-color:#1E90FF;color:white;font-size:{cell_size//2}px;font-weight:bold;border:2px solid #FFD700;")
+                    cell.setStyleSheet(
+                        f"background-color:#1E90FF;color:white;"
+                        f"font-size:{cell_size//2}px;font-weight:bold;"
+                        f"border:2px solid #FFD700;"
+                    )
                 else:
-                    cell.setStyleSheet(f"background-color:{color};border:1px solid #555555;")
-                self.board_layout.addWidget(cell,r,c)
+                    cell.setStyleSheet(
+                        f"background-color:{color};border:1px solid #555555;"
+                    )
+
+                self.board_layout.addWidget(cell, r, c)
 
         self.stacked.setCurrentWidget(self.board_page)
-
-
