@@ -15,6 +15,7 @@ QPushButton {
     font-size: 18px;
     font-weight: bold;
     padding: 10px;
+    font-family: 'Comic Sans MS'
 }
 QPushButton:hover {
     background-color: #3AA0FF;
@@ -32,6 +33,8 @@ QLineEdit {
     font-size: 16px;
     background-color: #2C2C2C;
     color: #FFFFFF;
+    font-family: 'Comic Sans MS'
+    
 }
 QLineEdit:focus {
     border: 2px solid #1E90FF;
@@ -47,6 +50,7 @@ QComboBox {
     font-size: 16px;
     background-color: #2C2C2C;
     color: #FFFFFF;
+    font-family: 'Comic Sans MS'
 }
 QComboBox:hover {
     border: 2px solid #1E90FF;
@@ -58,6 +62,7 @@ LABEL_STYLE = """
 font-size: 24px;
 font-weight: bold;
 color: #FFFFFF;
+font-family: 'Comic Sans MS'
 """
 
 # ----------------------------
@@ -69,7 +74,7 @@ class KPieceSolverGUI(QMainWindow):
         self.custom_pieces = {}   # name → list of attack offsets
         self.setWindowTitle("K-Pieces Solver")
         self.setGeometry(50, 50, 900, 700)
-        self.setStyleSheet("background-color: #121212;")
+        self.setStyleSheet("background-color: #121212;font-family: 'Comic Sans MS'")
         
         self.stacked = QStackedWidget()
         self.setCentralWidget(self.stacked)
@@ -202,18 +207,9 @@ class KPieceSolverGUI(QMainWindow):
         main_layout.addWidget(scroll)
 
         return page
-    #--------------- toggle --------------------
-    def toggle_attack_square(self, r, c):
-        btn, base_color = self.custom_cells[(r, c)]
-
-        if btn.isChecked():
-            # Highlight green
-            btn.setStyleSheet("background-color: #00AA00;")
-        else:
-            # Return to normal board color
-            btn.setStyleSheet(f"background-color: {base_color};")
-
+    
     #-------------------Piece Page ----------------
+
     def create_new_piece_page(self):
         page = QWidget()
         layout = QVBoxLayout(page)
@@ -225,24 +221,37 @@ class KPieceSolverGUI(QMainWindow):
 
         instructions = QLabel(
             "Click squares to mark attack moves.\n"
-            "Center square is the piece's position."
+            "Center square is the piece's position.\n"
+            "Or tick standard directions:"
         )
         instructions.setStyleSheet("font-size: 18px; color: #CCCCCC;")
         instructions.setAlignment(Qt.AlignCenter)
         layout.addWidget(instructions)
 
-        # ====== Chessboard grid (8x8) ======
+        # ===== Checkbox Options =====
+        self.row_cb = QCheckBox("Row")
+        self.col_cb = QCheckBox("Column")
+        self.diag_cb = QCheckBox("Diagonals")
+        for cb in [self.row_cb, self.col_cb, self.diag_cb]:
+            cb.setStyleSheet("color:white; font-size:16px;")
+            cb.stateChanged.connect(self.update_standard_highlights)
+
+        cb_layout = QHBoxLayout()
+        cb_layout.addWidget(self.row_cb)
+        cb_layout.addWidget(self.col_cb)
+        cb_layout.addWidget(self.diag_cb)
+        layout.addLayout(cb_layout)
+
+        # ===== Chessboard grid (8x8) =====
         self.custom_board_size = 8
         size = self.custom_board_size
         self.custom_board_widget = QWidget()
-        self.custom_board_widget.setContentsMargins(0, 0, 0, 0)
-        self.custom_board_widget.setStyleSheet("margin:0; padding:0; border:0;")
-
+        self.custom_board_widget.setContentsMargins(210, 0, 0, 0)
         self.custom_board_layout = QGridLayout(self.custom_board_widget)
         self.custom_board_layout.setSpacing(0)
-        self.custom_board_layout.setContentsMargins(0, 0, 0, 0)
         self.custom_board_layout.setSizeConstraint(QLayout.SetFixedSize)
-        self.custom_board_widget.setFixedSize(size * 50, size * 50)
+        self.custom_board_widget.setFixedSize(size*50, size*50)
+        self.custom_board_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.custom_cells = {}
 
@@ -251,36 +260,34 @@ class KPieceSolverGUI(QMainWindow):
                 btn = QPushButton()
                 btn.setFixedSize(50, 50)
                 btn.setCheckable(True)
+                base_color = "#EEEED2" if (r+c)%2==0 else "#769656"
 
-                base_color = "#EEEED2" if (r + c) % 2 == 0 else "#769656"
-
-                if r == size // 2 and c == size // 2:
+                # --- CENTER PIECE BUTTON ---
+                if r == size//2 and c == size//2:
                     btn.setText("★")
                     btn.setEnabled(False)
                     btn.setStyleSheet("""
                         QPushButton {
-                            background-color: #1E90FF;
+                            background-color:#1E90FF;
                             color:white;
                             font-size:28px;
-                            margin:0; padding:0; border:0;
-                        }
-                    """)
+                            margin:0; padding:0; border:0; border-radius:0;
+                        }   """ )  # ← FIXED
                 else:
-                    btn.setStyleSheet(f"""
-                        QPushButton {{
-                            background-color:{base_color};
-                            margin:0; padding:0; border:0;
-                        }}
-                    """)
+                    btn.setStyleSheet(
+                        f"QPushButton {{background-color:{base_color};margin:0;padding:0;border:0;border-radius:0;}}"
+                    )  # ← FIXED: added border-radius:0
                     btn.clicked.connect(lambda _, rr=r, cc=c: self.toggle_attack_square(rr, cc))
 
-                self.custom_cells[(r, c)] = (btn, base_color)
+                self.custom_cells[(r,c)] = {
+                    'btn': btn, 'base_color': base_color,
+                    'manual': False, 'standard': False
+                }
                 self.custom_board_layout.addWidget(btn, r, c)
-
 
         layout.addWidget(self.custom_board_widget)
 
-        # ====== Piece name ======
+        # ===== Piece name =====
         name_label = QLabel("Piece Name:")
         name_label.setStyleSheet("color:white; font-size:20px; font-weight:bold;")
         layout.addWidget(name_label)
@@ -289,13 +296,13 @@ class KPieceSolverGUI(QMainWindow):
         self.new_piece_name.setStyleSheet(INPUT_STYLE)
         layout.addWidget(self.new_piece_name)
 
-        # ====== Save button ======
+        # ===== Save button =====
         save_btn = QPushButton("💾 SAVE PIECE")
         save_btn.setStyleSheet(BUTTON_STYLE)
         save_btn.clicked.connect(self.save_custom_piece)
         layout.addWidget(save_btn)
 
-        # ====== Back button ======
+        # ===== Back button =====
         back_btn = QPushButton("⬅ BACK")
         back_btn.setStyleSheet(BUTTON_STYLE)
         back_btn.clicked.connect(lambda: self.stacked.setCurrentWidget(self.input_page))
@@ -303,9 +310,104 @@ class KPieceSolverGUI(QMainWindow):
 
         return page
 
+    # ---------------- Update Standard Highlights ----------------
+    def update_standard_highlights(self):
+        center = self.custom_board_size//2
+        size = self.custom_board_size
 
-    
+        for (r, c), cell in self.custom_cells.items():
+            if r == center and c == center:
+                continue
+            # Reset standard highlight
+            cell['standard'] = False
+            # Row
+            if self.row_cb.isChecked() and r == center:
+                cell['standard'] = True
+            # Column
+            if self.col_cb.isChecked() and c == center:
+                cell['standard'] = True
+            # Diagonals
+            if self.diag_cb.isChecked() and (r-center == c-center or r-center == center-c):
+                cell['standard'] = True
+            self.update_cell_color(r, c)
 
+    # ---------------- Toggle Manual Attack ----------------
+    def toggle_attack_square(self, r, c):
+        cell = self.custom_cells[(r, c)]
+        cell['manual'] = not cell['manual']
+        self.update_cell_color(r, c)
+
+
+    # ---------------- Update Cell Color ----------------
+    def update_cell_color(self, r, c):
+        cell = self.custom_cells[(r, c)]
+        btn = cell['btn']
+        base = cell['base_color']
+        if cell['manual']:
+            btn.setStyleSheet("background-color:#00AA00;margin:0;padding:0;border:0;border-radius:0")
+        elif cell['standard']:
+            btn.setStyleSheet("background-color:#88FF88;margin:0;padding:0;border:0;border-radius:0")
+        else:
+            btn.setStyleSheet(f"background-color:{base};margin:0;padding:0;border:0;border-radius:0")
+
+    # ---------------- save custom piece ----------------
+    def save_custom_piece(self):
+        name = self.new_piece_name.text().strip()
+        if not name:
+            QMessageBox.warning(self, "Error", "Enter a piece name.")
+            return
+
+        center = self.custom_board_size // 2
+        attacks = []
+
+        # --------------- Manual squares ----------------
+        for (r, c), cell in self.custom_cells.items():
+            if r == center and c == center:
+                continue  # skip center
+            if cell['manual']:
+                dr = r - center
+                dc = c - center
+                attacks.append((dr, dc))
+
+        # --------------- Standard directions ----------------
+        size = self.custom_board_size
+
+        # Row
+        if self.row_cb.isChecked():
+            self.special_attacks=['row']
+
+        # Column
+        if self.col_cb.isChecked():
+            self.special_attacks=['col']
+
+        # Diagonals
+        if self.diag_cb.isChecked():
+            self.special_attacks=['diag']
+
+        if not attacks and not (self.row_cb.isChecked() or self.col_cb.isChecked() or self.diag_cb.isChecked()):
+            QMessageBox.warning(self, "Error", "Select at least one attack square or direction.")
+            return
+
+        # Save the custom piece
+        self.custom_pieces[name] = attacks
+
+        # Add into combo
+        self.piece_combo.addItem(f"{name} ⭐")
+
+        QMessageBox.information(self, "Saved", f"Piece '{name}' added!")
+
+        # Reset checkboxes and manual selections
+        self.row_cb.setChecked(False)
+        self.col_cb.setChecked(False)
+        self.diag_cb.setChecked(False)
+        for cell in self.custom_cells.values():
+            cell['manual'] = False
+            cell['standard'] = False
+            btn = cell['btn']
+            btn.setStyleSheet(f"background-color:{cell['base_color']};padding:0;border:0;border-radius:0")
+
+        self.new_piece_name.clear()
+        self.stacked.setCurrentWidget(self.input_page)
 
     # ---------------- Input Page ----------------
     def create_input_page(self):
@@ -477,40 +579,6 @@ class KPieceSolverGUI(QMainWindow):
             w = self.board_layout.itemAt(i).widget()
             if w:
                 w.deleteLater()
-    # ---------------- save Custom piece ------------
-    def save_custom_piece(self):
-        name = self.new_piece_name.text().strip()
-        if not name:
-            QMessageBox.warning(self, "Error", "Enter a piece name.")
-            return
-
-        center = self.custom_board_size // 2
-        attacks = []
-
-        # Iterate on real dictionary
-        for (r, c), (btn, base_color) in self.custom_cells.items():
-            if r == center and c == center:
-                continue  # skip center
-
-            if btn.isChecked():  # green square
-                dr = r - center
-                dc = c - center
-                attacks.append((dr, dc))
-
-        if not attacks:
-            QMessageBox.warning(self, "Error", "Select at least one attack square.")
-            return
-
-        # Save the custom piece
-        self.custom_pieces[name] = attacks
-
-        # Add into combo
-        self.piece_combo.addItem(f"{name} ⭐")
-
-        QMessageBox.information(self, "Saved", f"Piece '{name}' added!")
-
-        self.stacked.setCurrentWidget(self.input_page)
-
 
 
     # ---------------- Solve ----------------
@@ -572,14 +640,15 @@ class KPieceSolverGUI(QMainWindow):
                             model.addConstr(x[(r, c)] + x[(rr, cc)] <= 1)
 
         # Rook/Queen – rows & columns
-        if piece in ["Queen", "Rook"]:
+        if piece in ["Queen", "Rook"] or self.special_attacks==['row']:
             for r in range(1, n+1):
                 model.addConstr(sum(x[(r, c)] for c in range(1, n+1)) <= 1)
+        if piece in ["Queen", "Rook"] or self.special_attacks==['col']:
             for c in range(1, n+1):
                 model.addConstr(sum(x[(r, c)] for r in range(1, n+1)) <= 1)
 
         # Bishop/Queen – diagonals
-        if piece in ["Queen", "Bishop"]:
+        if piece in ["Queen", "Bishop"] or self.special_attacks==['diag']:
             for b in range(-(n-1), n):
                 model.addConstr(sum(x[(r, c)] for r in range(1, n+1)
                                                 for c in range(1, n+1)
