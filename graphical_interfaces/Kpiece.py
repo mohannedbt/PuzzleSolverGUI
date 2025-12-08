@@ -75,7 +75,7 @@ class KPieceSolverGUI(QMainWindow):
         self.setWindowTitle("K-Pieces Solver")
         self.setGeometry(50, 50, 900, 700)
         self.setStyleSheet("background-color: #121212;font-family: 'Comic Sans MS'")
-        
+        self.special_attacks={}
         self.stacked = QStackedWidget()
         self.setCentralWidget(self.stacked)
         
