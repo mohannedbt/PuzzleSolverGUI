@@ -156,6 +156,9 @@ class KPieceSolverGUI(QMainWindow):
     - Rook ♜
     - Bishop ♝
     - Knight ♞
+    - Custom pieces (create your own!)
+    You can create custom pieces by defining their attack patterns.
+                              
 
     2️⃣ Enter the board size N (e.g., 8 for an 8x8 board).
 
