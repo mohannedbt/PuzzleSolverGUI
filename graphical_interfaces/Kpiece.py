@@ -419,6 +419,7 @@ class KPieceSolverGUI(QMainWindow):
 
         # Page background color
         page.setStyleSheet("background-color: #1E1E1E;")  # dark gray
+        
 
         # ---------------- Labels style ----------------
         LABEL_STYLE = """
