@@ -293,6 +293,27 @@ class OptiSuiteHub(QMainWindow):
 
         self.dashboard_grid.addWidget(card, row, col)
 
+    def add_external_app1(self, name, description, icon, script_path):
+        """Ajoute une carte + bouton qui lance une app externe PyQt6/Python."""
+        
+        # --- Bouton dans la Sidebar ---
+        btn = self._create_nav_button(name, icon, -1)
+        btn.clicked.connect(lambda: Popen([sys.executable, script_path]))
+        self.nav_layout.addWidget(btn)
+
+        # --- Carte Dashboard ---
+        row = (self.stack.count() + 1) // 3 + 1
+        col = (self.stack.count() + 1) % 3+1
+
+        card = SolverCard(
+            title=name,
+            description=description,
+            icon_text=icon,
+            launch_callback=lambda: Popen([sys.executable, script_path])
+        )
+
+        self.dashboard_grid.addWidget(card, row, col)
+
     def switch_view(self, index):
         """Switches the right-hand view and updates sidebar state"""
         self.stack.setCurrentIndex(index)
@@ -311,12 +332,12 @@ class OptiSuiteHub(QMainWindow):
         """
         
         # 1. Sudoku
-        self.register_solver(
-            name="Sudoku Master",
-            description="Constraint Satisfaction Problem solver optimized for 9x9 grids.",
-            icon="🧩",
-            widget_instance=SudokuSolverGUI()
-        )
+        # self.register_solver(
+        #     name="Sudoku Master",
+        #     description="Constraint Satisfaction Problem solver optimized for 9x9 grids.",
+        #     icon="🧩",
+        #     widget_instance=SudokuSolverGUI()
+        # )
 
         # 2. K-Pieces
         self.register_solver(
@@ -329,9 +350,14 @@ class OptiSuiteHub(QMainWindow):
             name="Capital Budgeting",
             description="Optimisation & sélection des projets d'investissement",
             icon="💼",
-            script_path="project_capital_budgeting/main.py"  # ← chemin vers ton script
+            script_path="project_capital_budgeting/main.py"  
         )
-
+        self.add_external_app1(
+            name="Path Plannig",
+            description="Planification d'une trajectoire minimisant la distance et le risque (évitant certaines zones).",
+            icon="🤖",
+            script_path="projet_ro/main.py" 
+        )
         # ---------------------------------------------------------
         # HOW TO ADD YOUR FRIEND'S INTERFACE:
         # ---------------------------------------------------------
