@@ -11,6 +11,8 @@ from PySide6.QtGui import QFont, QIcon, QColor, QAction
 try:
     from graphical_interfaces.sudoku import SudokuSolverGUI
     from graphical_interfaces.Kpiece import KPieceSolverGUI
+    from graphical_interfaces.Scheduling import SchedulingSolverGUI
+    from graphical_interfaces.AssemblyLineBalance import AssemblyLineBalanceSolverGUI
     # from graphical_interfaces.friend_project import FriendSolverGUI 
 except ImportError:
     # Fallbacks for testing if files aren't found
@@ -19,6 +21,8 @@ except ImportError:
         def __init__(self, name): super().__init__(); self.setCentralWidget(QLabel(f"{name} Placeholder"))
     SudokuSolverGUI = lambda: Placeholder("Sudoku")
     KPieceSolverGUI = lambda: Placeholder("K-Pieces")
+    SchedulingSolverGUI = lambda: Placeholder("Scheduling")
+    AssemblyLineBalanceSolverGUI = lambda: Placeholder("Assembly Line Balance")
 
 
 # -------------------------------------------------------------------------
@@ -281,7 +285,7 @@ class OptiSuiteHub(QMainWindow):
         self.nav_layout.addWidget(btn)
 
         # --- Carte Dashboard ---
-        row = (self.stack.count() + 1) // 3 + 1
+        row = (self.stack.count()) // 3 + 1
         col = (self.stack.count() + 1) % 3
 
         card = SolverCard(
@@ -303,7 +307,7 @@ class OptiSuiteHub(QMainWindow):
 
         # --- Carte Dashboard ---
         row = (self.stack.count() + 1) // 3 + 1
-        col = (self.stack.count() + 1) % 3+1
+        col = (self.stack.count() + 1) % 3+2
 
         card = SolverCard(
             title=name,
@@ -357,6 +361,20 @@ class OptiSuiteHub(QMainWindow):
             description="Planification d'une trajectoire minimisant la distance et le risque (évitant certaines zones).",
             icon="🤖",
             script_path="projet_ro/main.py" 
+        )
+        self.register_solver(
+            name="Scheduling Solver",
+            description="Graph coloring MIP for exam scheduling without conflicts.",
+            icon="📅",
+            widget_instance=SchedulingSolverGUI()
+        )
+
+        # 3. Assembly Line Balancing
+        self.register_solver(
+            name="Assembly Line Balancing",
+            description="Minimize workstations while respecting cycle time with dual time analysis.",
+            icon="⚙️",
+            widget_instance=AssemblyLineBalanceSolverGUI()
         )
         # ---------------------------------------------------------
         # HOW TO ADD YOUR FRIEND'S INTERFACE:

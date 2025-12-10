@@ -6,6 +6,86 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtWidgets import QMessageBox
 
+# -------------------------------------------------------------------------
+# STYLING & THEME CONFIGURATION
+# -------------------------------------------------------------------------
+THEME = {
+    "bg_dark": "#1e1e2e",       # Main Window BG
+    "bg_lighter": "#2a2a3c",    # Card/Sidebar BG
+    "accent": "#7f5af0",        # Main Purple Accent
+    "secondary": "#2cb67d",     # Green Accent
+    "text_main": "#fffffe",
+    "text_dim": "#94a1b2",
+    "button_hover": "#36364f"
+}
+
+STYLESHEET = f"""
+QMainWindow {{
+    background-color: {THEME['bg_dark']};
+}}
+
+/* Sidebar Styling */
+QFrame#Sidebar {{
+    background-color: {THEME['bg_lighter']};
+    border-right: 1px solid #3f3f55;
+}}
+QLabel#AppLogo {{
+    color: {THEME['accent']};
+    font-weight: bold;
+    font-size: 24px;
+    padding: 20px;
+}}
+QPushButton.NavButton {{
+    background-color: transparent;
+    color: {THEME['text_dim']};
+    text-align: left;
+    padding: 15px 20px;
+    border: none;
+    font-size: 16px;
+    border-left: 4px solid transparent;
+}}
+QPushButton.NavButton:hover {{
+    background-color: {THEME['button_hover']};
+    color: {THEME['text_main']};
+}}
+QPushButton.NavButton:checked {{
+    color: {THEME['text_main']};
+    border-left: 4px solid {THEME['accent']};
+    background-color: {THEME['button_hover']};
+}}
+
+/* Dashboard Card Styling */
+QFrame.SolverCard {{
+    background-color: {THEME['bg_lighter']};
+    border-radius: 15px;
+    border: 1px solid #3f3f55;
+}}
+QFrame.SolverCard:hover {{
+    border: 1px solid {THEME['accent']};
+    background-color: {THEME['button_hover']};
+}}
+QLabel.CardTitle {{
+    color: {THEME['text_main']};
+    font-size: 20px;
+    font-weight: bold;
+}}
+QLabel.CardDesc {{
+    color: {THEME['text_dim']};
+    font-size: 14px;
+}}
+QPushButton.CardButton {{
+    background-color: {THEME['accent']};
+    color: white;
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-weight: bold;
+}}
+QPushButton.CardButton:hover {{
+    background-color: #6a48c9;
+}}
+"""
+
+
 class HomePage(QWidget):
     def __init__(self):
         super().__init__()
