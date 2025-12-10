@@ -1,4 +1,6 @@
 import sys
+from subprocess import Popen
+import os
 from PySide6.QtWidgets import *
 from PySide6.QtCore import Qt, QSize, QPropertyAnimation, QEasingCurve
 from PySide6.QtGui import QFont, QIcon, QColor, QAction
@@ -270,6 +272,26 @@ class OptiSuiteHub(QMainWindow):
             launch_callback=lambda: self.switch_view(index)
         )
         self.dashboard_grid.addWidget(card, row, col)
+    def add_external_app(self, name, description, icon, script_path):
+        """Ajoute une carte + bouton qui lance une app externe PyQt6/Python."""
+        
+        # --- Bouton dans la Sidebar ---
+        btn = self._create_nav_button(name, icon, -1)
+        btn.clicked.connect(lambda: Popen([sys.executable, script_path]))
+        self.nav_layout.addWidget(btn)
+
+        # --- Carte Dashboard ---
+        row = (self.stack.count() + 1) // 3 + 1
+        col = (self.stack.count() + 1) % 3
+
+        card = SolverCard(
+            title=name,
+            description=description,
+            icon_text=icon,
+            launch_callback=lambda: Popen([sys.executable, script_path])
+        )
+
+        self.dashboard_grid.addWidget(card, row, col)
 
     def switch_view(self, index):
         """Switches the right-hand view and updates sidebar state"""
@@ -302,6 +324,12 @@ class OptiSuiteHub(QMainWindow):
             description="Linear optimization for placing K chess pieces without attacks.",
             icon="♟️",
             widget_instance=KPieceSolverGUI()
+        )
+        self.add_external_app(
+            name="Capital Budgeting",
+            description="Optimisation & sélection des projets d'investissement",
+            icon="💼",
+            script_path="project_capital_budgeting/main.py"  # ← chemin vers ton script
         )
 
         # ---------------------------------------------------------
