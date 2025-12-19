@@ -229,25 +229,32 @@ class AssemblyLineBalanceSolverGUI(QMainWindow):
         
         self.tasks_input = QPlainTextEdit()
         self.tasks_input.setStyleSheet(INPUT_STYLE)
-        self.tasks_input.setPlaceholderText("""# Example: Simple door assembly
+        self.tasks_input.setPlaceholderText("""# Automotive Door Assembly Line
+task InstallWindowMotor max 45 avg 40
+task MountDoorHinge max 60 avg 55  
+task InstallElectricalWiring max 35 avg 30
+task AttachInnerPanel max 50 avg 45
+task MountSpeakerSystem max 25 avg 22
+task InstallDoorLock max 40 avg 35
+task AttachOuterPanel max 55 avg 50
+task ApplyProtectiveCoating max 30 avg 27
+task QualityInspection max 35 avg 30
+task FinalTesting max 25 avg 22
 
-task MountHinge max 45 avg 40
-task InstallWindow max 30 avg 25
-task AddWiring max 25 avg 22
-task AttachPanel max 35 avg 30
-task InstallHandle max 15 avg 12
-task QualityCheck max 20 avg 18
+# Real-world automotive precedence constraints
+dep InstallWindowMotor MountDoorHinge           # Window motor before hinge
+dep MountDoorHinge InstallElectricalWiring      # Hinge before wiring
+dep InstallElectricalWiring AttachInnerPanel    # Wiring before inner panel
+dep AttachInnerPanel MountSpeakerSystem         # Inner panel before speakers
+dep AttachInnerPanel InstallDoorLock            # Inner panel before lock
+dep MountSpeakerSystem AttachOuterPanel         # Speakers before outer panel  
+dep InstallDoorLock AttachOuterPanel            # Lock before outer panel
+dep AttachOuterPanel ApplyProtectiveCoating     # Outer panel before coating
+dep ApplyProtectiveCoating QualityInspection    # Coating before inspection
+dep QualityInspection FinalTesting              # Inspection before final test
 
-# What must be done first
-dep MountHinge InstallWindow
-dep MountHinge AddWiring
-dep InstallWindow AttachPanel
-dep AddWiring AttachPanel
-dep AttachPanel InstallHandle
-dep InstallHandle QualityCheck
-
-# Each workstation has max 60 seconds
-max_cycle 60""")
+# Production target: 30 doors per hour (2 minutes per station)
+max_cycle 120""")
         self.tasks_input.setFixedHeight(150)
         layout.addWidget(self.tasks_input)
         
