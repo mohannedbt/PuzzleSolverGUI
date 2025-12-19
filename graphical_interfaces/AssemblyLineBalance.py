@@ -48,28 +48,29 @@ font-weight: bold;
 color: #FFFFFF;
 """
 
-example_data = """task design max 20 avg 15
-task prototype max 30 avg 25
-task test max 25 avg 20
-task manufacture max 50 avg 40
-task assemble max 40 avg 35
-task paint max 15 avg 12
-task quality_check max 10 avg 8
-task package max 20 avg 17
-task ship max 30 avg 25
-task feedback max 15 avg 10
+example_data = """task InstallWindowMotor max 45 avg 40
+task MountDoorHinge max 60 avg 55  
+task InstallElectricalWiring max 35 avg 30
+task AttachInnerPanel max 50 avg 45
+task MountSpeakerSystem max 25 avg 22
+task InstallDoorLock max 40 avg 35
+task AttachOuterPanel max 55 avg 50
+task ApplyProtectiveCoating max 30 avg 27
+task QualityInspection max 35 avg 30
+task FinalTesting max 25 avg 22
 
-dep prototype design
-dep test prototype
-dep manufacture prototype
-dep assemble manufacture
-dep paint assemble
-dep quality_check assemble
-dep package quality_check
-dep ship package
-dep feedback ship
+dep InstallWindowMotor MountDoorHinge          
+dep MountDoorHinge InstallElectricalWiring     
+dep InstallElectricalWiring AttachInnerPanel   
+dep AttachInnerPanel MountSpeakerSystem        
+dep AttachInnerPanel InstallDoorLock           
+dep MountSpeakerSystem AttachOuterPanel        
+dep InstallDoorLock AttachOuterPanel           
+dep AttachOuterPanel ApplyProtectiveCoating    
+dep ApplyProtectiveCoating QualityInspection   
+dep QualityInspection FinalTesting             
 
-max_cycle 60"""
+max_cycle 120"""
 
 # Helper function for efficiency color
 def get_efficiency_color(efficiency):
