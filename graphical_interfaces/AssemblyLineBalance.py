@@ -48,10 +48,26 @@ font-weight: bold;
 color: #FFFFFF;
 """
 
-example_data = """task paint max 10 avg 7
-task hammer max 30 avg 27
-task assemble max 50 avg 40
-task inspect max 15 avg 12
+example_data = """task design max 20 avg 15
+task prototype max 30 avg 25
+task test max 25 avg 20
+task manufacture max 50 avg 40
+task assemble max 40 avg 35
+task paint max 15 avg 12
+task quality_check max 10 avg 8
+task package max 20 avg 17
+task ship max 30 avg 25
+task feedback max 15 avg 10
+
+dep prototype design
+dep test prototype
+dep manufacture prototype
+dep assemble manufacture
+dep paint assemble
+dep quality_check assemble
+dep package quality_check
+dep ship package
+dep feedback ship
 
 max_cycle 60"""
 
@@ -139,7 +155,31 @@ class AssemblyLineBalanceSolverGUI(QMainWindow):
 
     # ============== Input Page ==============
     def create_input_page(self):
+        # Create scroll area for the entire input page
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        scroll.setStyleSheet("""
+            QScrollArea {
+                border: none;
+                background-color: #121212;
+            }
+            QScrollBar:vertical {
+                background-color: #2C2C2C;
+                width: 12px;
+                border-radius: 6px;
+            }
+            QScrollBar::handle:vertical {
+                background-color: #1E90FF;
+                border-radius: 6px;
+                min-height: 20px;
+            }
+        """)
+        
+        # Create container widget
         page = QWidget()
+        page.setStyleSheet("background-color: #121212;")  # Keep dark mode
         layout = QVBoxLayout(page)
         layout.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
         layout.setSpacing(15)
@@ -155,14 +195,58 @@ class AssemblyLineBalanceSolverGUI(QMainWindow):
         subtitle.setStyleSheet("font-size:14px;color:#CCCCCC;")
         layout.addWidget(subtitle)
         
+        # Clear instructions box
+        instructions = QLabel()
+        instructions.setText("""<div style="color: #CCCCCC; font-size: 14px; line-height: 1.4;">
+<h3 style="color: #1E90FF; margin-top: 0;">How to set up your line:</h3>
+<ol style="margin: 10px 0; padding-left: 20px;">
+<li><b>Define Tasks</b> – Each step in your production<br>
+   Format: <code style="color: #90EE90; background: #2A2A2A; padding: 2px 5px; border-radius: 3px;">task TaskName max 30 avg 25</code></li>
+<li><b>Set Dependencies</b> – What must be done first<br>
+   Format: <code style="color: #90EE90; background: #2A2A2A; padding: 2px 5px; border-radius: 3px;">dep FirstTask SecondTask</code></li>
+<li><b>Set Cycle Time</b> – Max time per workstation<br>
+   Format: <code style="color: #90EE90; background: #2A2A2A; padding: 2px 5px; border-radius: 3px;">max_cycle 60</code></li>
+</ol>
+<p style="margin: 10px 0;"><i>The solver uses <b>max</b> times to guarantee feasibility, and shows <b>avg</b> times for expected performance.</i></p>
+</div>""")
+        instructions.setWordWrap(True)
+        instructions.setStyleSheet("""
+            QLabel {
+                background-color: #2A2A2A;
+                border: 1px solid #444444;
+                border-radius: 8px;
+                padding: 15px;
+                margin: 10px 0;
+            }
+        """)
+        layout.addWidget(instructions)
+        
         # Task input
-        tasks_label = QLabel("Task Configuration (one per line: 'task <name> max <max_time> avg <avg_time>'):")
+        tasks_label = QLabel("Enter your configuration below:")
         tasks_label.setStyleSheet("font-size:16px;color:#FFFFFF;font-weight:bold;")
         layout.addWidget(tasks_label)
         
         self.tasks_input = QPlainTextEdit()
         self.tasks_input.setStyleSheet(INPUT_STYLE)
-        self.tasks_input.setPlaceholderText("Example:\n" + example_data)
+        self.tasks_input.setPlaceholderText("""# Example: Simple door assembly
+
+task MountHinge max 45 avg 40
+task InstallWindow max 30 avg 25
+task AddWiring max 25 avg 22
+task AttachPanel max 35 avg 30
+task InstallHandle max 15 avg 12
+task QualityCheck max 20 avg 18
+
+# What must be done first
+dep MountHinge InstallWindow
+dep MountHinge AddWiring
+dep InstallWindow AttachPanel
+dep AddWiring AttachPanel
+dep AttachPanel InstallHandle
+dep InstallHandle QualityCheck
+
+# Each workstation has max 60 seconds
+max_cycle 60""")
         self.tasks_input.setFixedHeight(150)
         layout.addWidget(self.tasks_input)
         
@@ -198,7 +282,10 @@ class AssemblyLineBalanceSolverGUI(QMainWindow):
         layout.addWidget(back_btn)
         
         layout.addStretch()
-        return page
+        
+        # Set the page as scroll area's widget
+        scroll.setWidget(page)
+        return scroll
 
     # ============== Result Page ==============
     def create_result_page(self):
@@ -349,19 +436,28 @@ class AssemblyLineBalanceSolverGUI(QMainWindow):
 
         Each line defines a task:
             task <name> max <max_duration> avg <avg_duration>
-        
+
         Example:
             task paint max 10 avg 7
             task hammer max 30 avg 27
             task assemble max 50 avg 40
             task inspect max 15 avg 12
-            
+
+        You can also define task dependencies with the following format:
+            dep <task_name> <dependent_task_name>
+
+        Example:
+            dep assemble paint
+            dep inspect hammer
+
+        Followed by maximum cycle time:
             max_cycle 60
 
         📌 FIELDS:
         - name: Task identifier (e.g., paint, hammer)
         - max: Worst-case (maximum) duration
         - avg: Expected (average) duration
+        - dep: Defines a prerequisite relationship between two tasks
         - max_cycle: Maximum allowed time per workstation
 
         💡 DUAL TIME ANALYSIS:
@@ -372,16 +468,16 @@ class AssemblyLineBalanceSolverGUI(QMainWindow):
         - Comparison between pessimistic and optimistic views
 
         📊 OUTPUT METRICS:
-        
+
         Stations Used: Number of workstations required
         Theoretical Minimum: Lower bound (cannot do better)
         Is Optimal: Whether we achieved the theoretical minimum
-        
+
         Efficiency (max): Real-world efficiency using worst-case times
         Efficiency (avg): Efficiency using expected times
         Balance Delay: Percentage of idle time in the line
         Cycle Time: Maximum time on any single workstation
-        
+
         Station Efficiencies: Load utilization per station
         - > 100%: NOT POSSIBLE (constraint violation)
         - 85-100%: Excellent
@@ -390,12 +486,13 @@ class AssemblyLineBalanceSolverGUI(QMainWindow):
         - < 50%: Poor balance
 
         🔍 HOW IT WORKS:
-        1. Parse task definitions and maximum cycle time
+        1. Parse task definitions, dependencies, and maximum cycle time
         2. Solve MIP (Mixed Integer Program) using Gurobi
-        3. Minimize number of stations subject to capacity constraints
+        3. Minimize number of stations subject to capacity and precedence constraints
         4. Extract and analyze the optimal assignment
         5. Calculate metrics for both max and avg durations
         """)
+
         instructions.setStyleSheet("font-size: 16px; color: #FFFFFF;")
         instructions.setWordWrap(True)
         scroll_layout.addWidget(instructions)
@@ -438,14 +535,14 @@ QPushButton:hover {
             return
         
         try:
-            tasks, t_max, t_avg, C_max = parse_task_input(input_text)
+            tasks, t_max, t_avg, C_max, dependencies = parse_task_input(input_text)
         except ValueError as e:
             QMessageBox.warning(self, "Parse Error", str(e))
             return
         
         # Solve
         try:
-            result = balance_line(t_max, precedence=None, C_max=C_max, t_avg=t_avg, tasks=tasks)
+            result = balance_line(t_max, dependencies=dependencies, C_max=C_max, t_avg=t_avg, tasks=tasks)
         except Exception as e:
             QMessageBox.critical(self, "Solver Error", f"Failed to solve: {str(e)}")
             return
