@@ -5,6 +5,8 @@ from PyQt6.QtWidgets import (
     QComboBox, QStackedWidget
 )
 from PyQt6.QtWidgets import QMessageBox
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.figure import Figure
 
 # -------------------------------------------------------------------------
 # STYLING & THEME CONFIGURATION
@@ -86,6 +88,14 @@ QPushButton.CardButton:hover {{
 """
 
 
+
+class MplCanvas(FigureCanvas):
+    def __init__(self, width=5, height=4, dpi=100):
+        fig = Figure(figsize=(width, height), dpi=dpi)
+        self.ax = fig.add_subplot(111)
+        super().__init__(fig)
+
+
 class HomePage(QWidget):
     def __init__(self):
         super().__init__()
@@ -106,6 +116,23 @@ class HomePage(QWidget):
         layout.addStretch()
 
         self.setLayout(layout)
+        warning = QLabel(
+            "⚠️ Remarque importante :\n"
+            "Pour obtenir un résultat cohérent, tous les projets doivent avoir\n"
+            "la même durée et la même unité temporelle (années / mois / trimestres).\n\n"
+            "Le calcul automatique pour des durées différentes\n"
+            "n'est pas encore disponible dans cette version."
+        )
+
+        warning.setStyleSheet("""
+            color: #b30000;
+            font-size: 12px;
+            background-color: #fff2f2;
+            padding: 8px;
+            border: 1px solid #ffcccc;
+        """)
+
+        layout.addWidget(warning)
 
 
 # ======================= PAGE 1 : Données de l'entreprise =======================
@@ -156,6 +183,8 @@ class InputPage1(QWidget):
         # Connexions
         self.add_machine_btn.clicked.connect(self.add_machine_row)
         self.del_machine_btn.clicked.connect(self.remove_machine_row)
+        self.backBtn = QPushButton("🏠 Retour à l'accueil")
+        layout.addWidget(self.backBtn)
 
     def add_machine_row(self):
         row = self.machineTable.rowCount()
@@ -218,9 +247,9 @@ class InputPage2(QWidget):
         cf_btn_layout.addWidget(self.add_cf_btn)
         cf_btn_layout.addWidget(self.del_cf_btn)
 
-        self.resultBtn = QPushButton("📈 Calcul final (plus tard)")
+
         self.solveBtn = QPushButton("🚀 Optimiser la sélection des projets")
-        main_layout.addWidget(self.solveBtn)
+
 
         self.solveBtn.clicked.connect(self.run_optimization)
 
@@ -232,9 +261,49 @@ class InputPage2(QWidget):
         main_layout.addWidget(QLabel("💶 Cash-flow du projet sélectionné"))
         main_layout.addWidget(self.cashTable)
         main_layout.addLayout(cf_btn_layout)
+        main_layout.addWidget(self.solveBtn)
+        self.backBtn = QPushButton("🏠 Retour à l'accueil")
 
-        main_layout.addWidget(self.resultBtn)
+
+        def show_van_chart(self):
+            names = []
+            vans = []
+
+            for r in range(self.projectTable.rowCount()):
+                van_item = self.projectTable.item(r, 7)
+                if van_item and van_item.text() != "":
+                    names.append(self.projectTable.item(r, 0).text())
+                    vans.append(float(van_item.text()))
+
+            if not vans:
+                QMessageBox.warning(self, "Erreur", "Aucune VAN calculée")
+                return
+
+            self.canvas = MplCanvas()
+            self.canvas.ax.bar(names, vans)
+            self.canvas.ax.set_title("Comparaison des VAN des projets")
+            self.canvas.ax.set_ylabel("VAN (TND)")
+            self.canvas.ax.set_xticklabels(names, rotation=45, ha="right")
+
+            dlg = QWidget()
+            dlg.setWindowTitle("📊 VAN des projets")
+            l = QVBoxLayout()
+            l.addWidget(self.canvas)
+            dlg.setLayout(l)
+            dlg.resize(600, 400)
+            dlg.show()
+
+        self.cfGraphBtn = QPushButton("📈 Cash-flow du projet")
+        main_layout.addWidget(self.cfGraphBtn)
+        self.cfGraphBtn.clicked.connect(self.show_cashflow_chart)
+
+        self.graphBtn = QPushButton("📊 Afficher graphique VAN")
+        main_layout.addWidget(self.graphBtn)
+        self.graphBtn.clicked.connect(self.show_van_chart)
+        main_layout.addWidget(self.backBtn)
+
         self.setLayout(main_layout)
+        self.backBtn.clicked.connect(lambda: self.mainWindow.pages.setCurrentIndex(0))
 
         # ==================== EVENTS ====================
         self.add_proj_btn.clicked.connect(self.add_project_row)
@@ -244,6 +313,64 @@ class InputPage2(QWidget):
 
         self.add_cf_btn.clicked.connect(self.add_cf)
         self.del_cf_btn.clicked.connect(self.remove_cf)
+
+    def show_van_chart(self):
+        names = []
+        vans = []
+
+        for r in range(self.projectTable.rowCount()):
+            van_item = self.projectTable.item(r, 7)
+            if van_item and van_item.text() != "":
+                names.append(self.projectTable.item(r, 0).text())
+                vans.append(float(van_item.text()))
+
+        if not vans:
+            QMessageBox.warning(self, "Erreur", "Aucune VAN calculée")
+            return
+
+        self.canvas = MplCanvas()
+        self.canvas.ax.bar(names, vans)
+        self.canvas.ax.set_title("Comparaison des VAN des projets")
+        self.canvas.ax.set_ylabel("VAN (TND)")
+        self.canvas.ax.tick_params(axis='x', rotation=45)
+
+        self.graphWindow = QWidget()
+        self.graphWindow.setWindowTitle("📊 VAN des projets")
+        layout = QVBoxLayout()
+        layout.addWidget(self.canvas)
+        self.graphWindow.setLayout(layout)
+        self.graphWindow.resize(600, 400)
+        self.graphWindow.show()
+
+    def show_cashflow_chart(self):
+        row = self.projectTable.currentRow()
+        if row < 0:
+            QMessageBox.warning(self, "Erreur", "Sélectionne un projet")
+            return
+
+        flows = self.cash_data.get(row, [])
+        if not flows:
+            QMessageBox.warning(self, "Erreur", "Aucun cash-flow pour ce projet")
+            return
+
+        periods = [int(p) for p, _ in flows]
+        values = [float(cf) for _, cf in flows]
+
+        self.cfCanvas = MplCanvas()
+        self.cfCanvas.ax.plot(periods, values, marker='o')
+        self.cfCanvas.ax.set_title("Cash-flow du projet")
+        self.cfCanvas.ax.set_xlabel("Période")
+        self.cfCanvas.ax.set_ylabel("Cash-flow (TND)")
+        self.cfCanvas.ax.grid(True)
+
+        # 🔥 fenêtre persistante
+        self.cfGraphWindow = QWidget()
+        self.cfGraphWindow.setWindowTitle("📈 Cash-flow du projet")
+        layout = QVBoxLayout()
+        layout.addWidget(self.cfCanvas)
+        self.cfGraphWindow.setLayout(layout)
+        self.cfGraphWindow.resize(600, 400)
+        self.cfGraphWindow.show()
 
     # ============================ ADD PROJECT ============================
 
@@ -423,7 +550,7 @@ class MainWindow(QWidget):
         self.home.btn_test2.clicked.connect(self.run_test2)
 
         self.page1.nextBtn.clicked.connect(self.goto_page2)
-
+        self.page1.backBtn.clicked.connect(lambda: self.pages.setCurrentIndex(0))
 
     def goto_page2(self):
         self.pages.setCurrentIndex(2)
